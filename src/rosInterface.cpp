@@ -64,8 +64,8 @@ void RosInterface::execute(const std::shared_ptr<GoalHandleNav2> goal_handle)
     RCLCPP_INFO_STREAM(this->get_logger(), "Executing goal of robot: " << goal_handle->get_goal()->behavior_tree);
     auto result = std::make_shared<NavigateToPose::Result>();
     getRobotMutex()->lock();
-    (*robotMaps_)["scout_2"].setPos.x = goal_handle->get_goal()->pose.pose.position.x;
-    (*robotMaps_)["scout_2"].setPos.y = goal_handle->get_goal()->pose.pose.position.y;
+    (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos.x = goal_handle->get_goal()->pose.pose.position.x;
+    (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos.y = goal_handle->get_goal()->pose.pose.position.y;
     getRobotMutex()->unlock();
     tf2::Quaternion q(
         goal_handle->get_goal()->pose.pose.orientation.x,
@@ -76,13 +76,13 @@ void RosInterface::execute(const std::shared_ptr<GoalHandleNav2> goal_handle)
     double roll, pitch, yaw;
     m.getRPY(roll, pitch, yaw);
     getRobotMutex()->lock();
-    (*robotMaps_)["scout_2"].setPos.yaw = yaw;
-    bool robotMoved = (*robotMaps_)["scout_2"].setPos != (*robotMaps_)["scout_2"].currentPos;
+    (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos.yaw = yaw;
+    bool robotMoved = (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos != (*robotMaps_)[goal_handle->get_goal()->behavior_tree].currentPos;
     getRobotMutex()->unlock();
     while (robotMoved)
     {
         getRobotMutex()->lock();
-        robotMoved = (*robotMaps_)["scout_2"].setPos != (*robotMaps_)["scout_2"].currentPos;
+        robotMoved = (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos != (*robotMaps_)[goal_handle->get_goal()->behavior_tree].currentPos;
         getRobotMutex()->unlock();
         std::cout << "Waiting for the robot to move" << std::endl;
         rclcpp::sleep_for(std::chrono::milliseconds(30));

@@ -21,18 +21,18 @@ public:
         }
         robotMaps = std::make_shared<std::map<std::string, RobotCharacteristics>>();
         exploredImage_ = cv::Mat(image_.size(), image_.type(), cv::Scalar(255));
-        makeRobot("scout_1", 2.5);
-        makeRobot("scout_2", 2.5);
+        makeRobot("/scout_1", 2.5);
+        makeRobot("/scout_2", 2.5);
         rosViz_ = std::make_shared<RosInterface>(robotMaps);
         Pose2D pose;
         pose.x = 5.5;
         pose.y = 5.5;
         pose.yaw = CV_PI / 6;
-        exploreMap("scout_1", pose);
+        exploreMapRayTrace("/scout_1", pose);
         pose.x = 11.5;
         pose.y = 5.5;
         pose.yaw = CV_PI / 3;
-        exploreMap("scout_2", pose);
+        exploreMapRayTrace("/scout_2", pose);
         std::thread t(&ExplorationSim::exploreMapLoop, this);
         t.detach();
     }
@@ -46,13 +46,13 @@ public:
 
     void exploreMapLoop()
     {
-        while (1)
+        while (1 && rclcpp::ok())
         {
             rosViz_->getRobotMutex()->lock();
             for (auto &pair : *robotMaps)
             {
                 if (pair.second.currentPos != pair.second.setPos)
-                    exploreMap(pair.first, pair.second.setPos);
+                    exploreMapRayTrace(pair.first, pair.second.setPos);
             }
             rosViz_->getRobotMutex()->unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -124,19 +124,64 @@ public:
         (*robotMaps)[robotName].currentPos = pose;
     }
 
+    void exploreMapRayTrace(std::string robotName, Pose2D &pose)
+    {
+        (*robotMaps)[robotName].setPos = pose;
+        int fovWorld = (*robotMaps)[robotName].FOV;
+        double rayStep = 0.01; // Step size for the ray tracing
+        // int numRays = 22;      // enable if you want realistic exploration
+        int numRays = 50;      // enable if you want solid colour
+
+        double offset = 0.5;
+        Point startPoint;
+        startPoint.x = pose.x - offset * std::cos(pose.yaw);
+        startPoint.y = pose.y - offset * std::sin(pose.yaw);
+
+        for (int i = 0; i < numRays; ++i)
+        {
+            auto breakFlag = false;
+            double angle = pose.yaw - (CV_PI / 6) + (i * CV_PI / (numRays * 3));
+            for (double r = 0; r < fovWorld; r += rayStep)
+            {
+                if (breakFlag)
+                {
+                    breakFlag = false;
+                    break;
+                }
+                Point currentPoint;
+                currentPoint.x = startPoint.x + r * std::cos(angle);
+                currentPoint.y = startPoint.y + r * std::sin(angle);
+
+                int mapX, mapY;
+                worldToMapNoBool(mapX, mapY, currentPoint.x, currentPoint.y);
+
+                if (mapX < 0 || mapY < 0 || mapX >= image_.cols || mapY >= image_.rows)
+                    break; // Break if the ray goes out of bounds
+
+                if (image_.at<uint8_t>(mapY, mapX) > 250)
+                    breakFlag = true;
+
+                exploredImage_.at<uint8_t>(mapY, mapX) = image_.at<uint8_t>(mapY, mapX);
+            }
+        }
+        rosViz_->publishCostmap(exploredImage_);
+        (*robotMaps)[robotName].currentPos = pose;
+    }
+
     void displayImage()
     {
         // Display the image_
-        cv::imshow("Exploration Simulation", exploredImage_);
-        cv::waitKey(0);          // Wait for a key press
-        cv::destroyAllWindows(); // Close all OpenCV windows
+        // cv::imshow("Exploration Simulation", exploredImage_);
+        // cv::waitKey(0);          // Wait for a key press
+        // cv::destroyAllWindows(); // Close all OpenCV windows
         // Display the image_
-        cv::imshow("Exploration Simulation", image_);
-        cv::waitKey(0);          // Wait for a key press
-        cv::destroyAllWindows(); // Close all OpenCV windows
+        // cv::imshow("Exploration Simulation", image_);
+        // cv::waitKey(0);          // Wait for a key press
+        // cv::destroyAllWindows(); // Close all OpenCV windows
         rosViz_->sendROSTransform();
-        while (1)
+        while (1 && rclcpp::ok())
         {
+            rosViz_->publishCostmap(exploredImage_);
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
     }
