@@ -23,6 +23,9 @@ RosInterface::RosInterface(std::shared_ptr<std::map<std::string, RobotCharacteri
                                                                                 std::bind(&RosInterface::handle_cancel, this, std::placeholders::_1),
                                                                                 std::bind(&RosInterface::handle_accepted, this, std::placeholders::_1));
         nav2_action_server_vector_.push_back(nav2_action_server_);
+
+        auto pose_publisher_ = rclcpp::create_publisher<geometry_msgs::msg::PoseStamped>(visualizer_node_, pair.first + "/execution_pose", 10);
+        robotPublishers_[pair.first] = pose_publisher_;
     }
     // Create a timer that calls sendROSTransform every 0.1 seconds
     tfTimer_ = visualizer_node_->create_wall_timer(std::chrono::milliseconds(5), std::bind(&RosInterface::sendROSTransform, this));
@@ -75,6 +78,9 @@ void RosInterface::execute(const std::shared_ptr<GoalHandleNav2> goal_handle)
     tf2::Matrix3x3 m(q);
     double roll, pitch, yaw;
     m.getRPY(roll, pitch, yaw);
+    auto r_pose = goal_handle->get_goal()->pose;
+    r_pose.header.frame_id = "map";
+    robotPublishers_[goal_handle->get_goal()->behavior_tree]->publish(r_pose);
     getRobotMutex()->lock();
     (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos.yaw = yaw;
     bool robotMoved = (*robotMaps_)[goal_handle->get_goal()->behavior_tree].setPos != (*robotMaps_)[goal_handle->get_goal()->behavior_tree].currentPos;

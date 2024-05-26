@@ -63,6 +63,7 @@ private:
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_publisher_;
     std::vector<rclcpp_action::Server<NavigateToPose>::SharedPtr> nav2_action_server_vector_;
     std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps_;
+    std::map<std::string, rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr> robotPublishers_;
 };
 
 #endif // ROS_VISUALIZER_HPP
