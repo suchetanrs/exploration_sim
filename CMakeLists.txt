@@ -16,6 +16,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 set(dependencies
 ament_cmake
@@ -32,6 +33,7 @@ tf2_ros
 tf2
 tf2_geometry_msgs
 OpenCV
+yaml-cpp
 )
 
 
@@ -59,15 +61,15 @@ set(include_dependencies
 # Add executable 1
 add_executable(explore_sim src/helpers.cpp src/sim.cpp src/rosInterface.cpp)
 ament_target_dependencies(explore_sim ${dependencies})
+target_link_libraries(explore_sim yaml-cpp)
 
 install(TARGETS explore_sim
 DESTINATION lib/${PROJECT_NAME}
 )
 
-# launch params
-# install(DIRECTORY include
-# DESTINATION share/${PROJECT_NAME}
-# )
+install(DIRECTORY include params
+DESTINATION share/${PROJECT_NAME}
+)
 
 ament_export_dependencies(rosidl_default_runtime)
 ament_package()

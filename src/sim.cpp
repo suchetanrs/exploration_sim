@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <thread>
+#include <yaml-cpp/yaml.h>
 
 #include "exploration_sim/rosInterface.hpp"
 
@@ -9,10 +10,32 @@ class ExplorationSim
 public:
     ExplorationSim(const std::string &filename)
     {
-        origin_x_ = 0.0;
-        origin_y_ = 0.0;
-        resolution_ = 0.05;
-        // Read the image_
+        std::string parameterFileName = "/root/dev_ws/src/exploration_sim/params/simulation_params.yaml";
+        try
+        {
+            YAML::Node config = YAML::LoadFile(parameterFileName);
+            origin_x_ = config["origin_x"].as<double>();
+            origin_y_ = config["origin_y"].as<double>();
+            resolution_ = config["resolution"].as<double>();
+            robots_ = config["robots"].as<std::vector<std::string>>();
+            FOVs_ = config["FOVs"].as<std::vector<double>>();
+            for (const auto &pos : config["positions"])
+            {
+                Pose2D p;
+                p.x = pos["x"].as<double>();
+                p.y = pos["y"].as<double>();
+                p.yaw = pos["yaw"].as<double>();
+                positions_.push_back(p);
+            }
+            if (robots_.size() != FOVs_.size() || robots_.size() != positions_.size())
+                throw std::runtime_error("Sizes are not same. Check the yaml file");
+        }
+        catch (const YAML::Exception &e)
+        {
+            std::string errorStr = "Error loading YAML file: ";
+            throw std::runtime_error(errorStr);
+        }
+        // Read the image
         image_ = cv::imread(filename, cv::IMREAD_GRAYSCALE);
         // sanity checks
         if (image_.empty())
@@ -21,18 +44,15 @@ public:
         }
         robotMaps = std::make_shared<std::map<std::string, RobotCharacteristics>>();
         exploredImage_ = cv::Mat(image_.size(), image_.type(), cv::Scalar(255));
-        makeRobot("/scout_1", 2.5);
-        makeRobot("/scout_2", 2.5);
+        for (size_t i = 0; i < robots_.size(); i++)
+        {
+            makeRobot(robots_[i], FOVs_[i]);
+        }
         rosViz_ = std::make_shared<RosInterface>(robotMaps);
-        Pose2D pose;
-        pose.x = 5.5;
-        pose.y = 5.5;
-        pose.yaw = CV_PI / 6;
-        exploreMapRayTrace("/scout_1", pose);
-        pose.x = 11.5;
-        pose.y = 5.5;
-        pose.yaw = CV_PI / 3;
-        exploreMapRayTrace("/scout_2", pose);
+        for (size_t i = 0; i < robots_.size(); i++)
+        {
+            exploreMapRayTrace(robots_[i], positions_[i]);
+        }
         std::thread t(&ExplorationSim::exploreMapLoop, this);
         t.detach();
     }
@@ -105,21 +125,6 @@ public:
                 }
             }
         }
-        // Define vertices of the triangle
-        // for (int y = 0; y < image_.rows; ++y)
-        // {
-        //     for (int x = 0; x < image_.cols; ++x)
-        //     {
-        //         // Check if the pixel value is equal to oldValue
-        //         Point interest;
-        //         mapToWorld(x, y, interest.x, interest.y);
-        //         if (pointInPolygon(interest, vertices))
-        //         {
-        //             exploredImage_.at<uint8_t>(y, x) = image_.at<uint8_t>(y, x);
-        //         }
-        //     }
-        // }
-        // set currentPos to setPos.
         rosViz_->publishCostmap(exploredImage_);
         (*robotMaps)[robotName].currentPos = pose;
     }
@@ -130,13 +135,11 @@ public:
         int fovWorld = (*robotMaps)[robotName].FOV;
         double rayStep = 0.01; // Step size for the ray tracing
         // int numRays = 22;      // enable if you want realistic exploration
-        int numRays = 50;      // enable if you want solid colour
-
+        int numRays = 50; // enable if you want solid colour
         double offset = 0.5;
         Point startPoint;
         startPoint.x = pose.x - offset * std::cos(pose.yaw);
         startPoint.y = pose.y - offset * std::sin(pose.yaw);
-
         for (int i = 0; i < numRays; ++i)
         {
             auto breakFlag = false;
@@ -148,6 +151,7 @@ public:
                     breakFlag = false;
                     break;
                 }
+
                 Point currentPoint;
                 currentPoint.x = startPoint.x + r * std::cos(angle);
                 currentPoint.y = startPoint.y + r * std::sin(angle);
@@ -192,6 +196,9 @@ private:
     double origin_x_;
     double origin_y_;
     double resolution_;
+    std::vector<std::string> robots_;
+    std::vector<double> FOVs_;
+    std::vector<Pose2D> positions_;
     std::shared_ptr<RosInterface> rosViz_;
 
     int numRobots = 2;
@@ -243,7 +250,7 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
 
     // Provide the filename of the image_ in the program's path
-    std::string filename = "/root/dev_ws/src/exploration_sim/src/map_05res_ros.jpg";
+    std::string filename = "/root/dev_ws/src/exploration_sim/maps/map_05res_ros.jpg";
 
     ExplorationSim explorer(filename);
     explorer.displayImage();

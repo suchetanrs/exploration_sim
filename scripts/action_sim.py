@@ -48,7 +48,7 @@ def main():
             goal_msg = NavigateToPose.Goal()
             goal_msg.pose.pose.position.x = posex
             goal_msg.pose.pose.position.y = posey
-            goal_msg.behavior_tree = "scout_2"
+            goal_msg.behavior_tree = "/scout_2"
             future_goal = action_client.send_goal_async(goal_msg, feedback_callback=None)
             # future_goal.add_done_callback(goal_response_callback)
             future_goal.add_done_callback(goal_response_callback)
