@@ -10,6 +10,11 @@ FOVs: #in m
   - 2.5
   - 2.5
 positions: #coord in m
+  # - { x: 5.5, y: 5.5, yaw: 0.51 }
+  # - { x: 11.5, y: 5.5, yaw: 1.04 }
+  # - { x: 1.5, y: 1.5, yaw: 1.04 }
   - { x: 5.5, y: 5.5, yaw: 0.51 }
-  - { x: 11.5, y: 5.5, yaw: 1.04 }
-  - { x: 1.5, y: 1.5, yaw: 1.04 }
+  - { x: 5.5, y: 5.5, yaw: 0.51 }
+  - { x: 5.5, y: 5.5, yaw: 0.51 }
+movement_method: "cmd_vel_follow" # choose from "direct_jump", "cmd_vel_follow"
+map_explore_frequency: 1.0 # if you choose "cmd_vel_follow", input the freq of exploring a map. A new keyframe is added at this frequency.

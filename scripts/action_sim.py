@@ -14,7 +14,7 @@ def main():
     posey = 0.0
 
     # Create an action client for the NavigateToPose action
-    action_client = ActionClient(node, NavigateToPose, '/scout_2/navigate_to_pose')
+    action_client = ActionClient(node, NavigateToPose, '/scout_1/navigate_to_pose')
 
     # Wait for the action server to be available
     if not action_client.wait_for_server(timeout_sec=20.0):
@@ -54,11 +54,11 @@ def main():
             future_goal.add_done_callback(goal_response_callback)
 
             # rclpy.spin_until_future_complete(node, future_goal)
-            posex = posex + 0.8
-            if(posex > 45.0):
-                posex = 0.0
-                posey = posey + 1.0
-            if(posey > 60.0):
+            posey = posey + 0.8
+            if(posey > 45.0):
+                posey = 0.0
+                posex = posex + 1.0
+            if(posex > 60.0):
                 break
         rclpy.spin_once(node)
         

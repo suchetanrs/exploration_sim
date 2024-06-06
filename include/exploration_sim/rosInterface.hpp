@@ -12,6 +12,8 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/utils.h>
+#include <geometry_msgs/msg/twist.hpp>
 
 #include "exploration_sim/helpers.hpp"
 
@@ -20,7 +22,7 @@ using GoalHandleNav2 = rclcpp_action::ServerGoalHandle<NavigateToPose>;
 class RosInterface : public rclcpp::Node
 {
 public:
-    RosInterface(std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps);
+    RosInterface(std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps, std::string& movementMethod);
 
     void publishCostmap(cv::Mat image);
 
@@ -40,7 +42,9 @@ public:
 
     void handle_accepted(const std::shared_ptr<GoalHandleNav2> goal_handle);
 
-    void execute(const std::shared_ptr<GoalHandleNav2> goal_handle);
+    void velocityCallback(geometry_msgs::msg::Twist::SharedPtr vel, std::string robotName);
+
+    void executeDirectJump(const std::shared_ptr<GoalHandleNav2> goal_handle);
 
 private:
     void threadFunction(std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> ptr)
@@ -62,8 +66,10 @@ private:
 
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_publisher_;
     std::vector<rclcpp_action::Server<NavigateToPose>::SharedPtr> nav2_action_server_vector_;
-    std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps_;
+    std::vector<rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr> cmd_vel_subscription_vector_;
     std::map<std::string, rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr> robotPublishers_;
+    std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps_;
+    std::string movementMethod_;
 };
 
 #endif // ROS_VISUALIZER_HPP

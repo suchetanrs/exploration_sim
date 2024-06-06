@@ -19,6 +19,7 @@ public:
             resolution_ = config["resolution"].as<double>();
             robots_ = config["robots"].as<std::vector<std::string>>();
             FOVs_ = config["FOVs"].as<std::vector<double>>();
+            movementMethod = config["movement_method"].as<std::string>();
             for (const auto &pos : config["positions"])
             {
                 Pose2D p;
@@ -48,7 +49,7 @@ public:
         {
             makeRobot(robots_[i], FOVs_[i]);
         }
-        rosViz_ = std::make_shared<RosInterface>(robotMaps);
+        rosViz_ = std::make_shared<RosInterface>(robotMaps, movementMethod);
         for (size_t i = 0; i < robots_.size(); i++)
         {
             exploreMapRayTrace(robots_[i], positions_[i]);
@@ -203,6 +204,7 @@ private:
 
     int numRobots = 2;
     std::shared_ptr<std::map<std::string, RobotCharacteristics>> robotMaps;
+    std::string movementMethod;
 
     void mapToWorld(int map_x, int map_y, double &world_x, double &world_y) const
     {

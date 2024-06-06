@@ -23,6 +23,7 @@ struct RobotCharacteristics
     double FOV;
     Pose2D currentPos;
     Pose2D setPos;
+    std::shared_ptr<std::chrono::_V2::system_clock::time_point> lastCmdVelTime;
 
     RobotCharacteristics() {};
 };
